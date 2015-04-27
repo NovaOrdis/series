@@ -10,7 +10,8 @@ import java.util.LinkedList;
 import java.util.List;
 
 /**
- * Implementation is not thread safe, and for the time being, it does not make sense to make it so as the file loading is done serially.
+ * Implementation is not thread safe, and for the time being, it does not make sense to make it so as the file loading
+ * is done serially.
  *
  * @see Storage
  *
@@ -20,25 +21,44 @@ import java.util.List;
  */
 public class LinkedListStorage implements Storage
 {
-    // Constants ---------------------------------------------------------------------------------------------------------------------------
+    // Constants -------------------------------------------------------------------------------------------------------
 
-    // Static ------------------------------------------------------------------------------------------------------------------------------
+    // Static ----------------------------------------------------------------------------------------------------------
 
-    // Attributes --------------------------------------------------------------------------------------------------------------------------
+    // Attributes ------------------------------------------------------------------------------------------------------
 
+    private boolean acceptDuplicateTimestamps;
     private LinkedList<Row> rows;
 
-    // Constructors ------------------------------------------------------------------------------------------------------------------------
+    // Constructors ----------------------------------------------------------------------------------------------------
 
+    /**
+     * By default, the storage implementation DOES NOT accept duplicate timestamps.
+     *
+     * @see com.novaordis.series.storage.LinkedListStorage#LinkedListStorage(boolean)
+     */
     public LinkedListStorage()
     {
+        this(false);
+    }
+
+    /**
+     * @param acceptsDuplicateTimestamps if true, this instance will accept adding two or more rows with the same
+     *                                   timestamp. If false, the implementation will throw DuplicateTimestampException
+     *                                   if rows with the same timestamps are detected.
+     */
+    public LinkedListStorage(boolean acceptsDuplicateTimestamps)
+    {
+        this.acceptDuplicateTimestamps = acceptsDuplicateTimestamps;
         this.rows = new LinkedList<Row>();
     }
 
-    // Storage implementation --------------------------------------------------------------------------------------------------------------
+
+    // Storage implementation ------------------------------------------------------------------------------------------
 
     /**
-     * Implementation is optimized for sequential text file parsing - rows are added in a monotonically increasing manner.
+     * Implementation is optimized for sequential text file parsing - rows are added in a monotonically increasing
+     * manner.
      *
      * @see Storage#add(com.novaordis.series.Row)
      *
@@ -67,21 +87,27 @@ public class LinkedListStorage implements Storage
                 // we're good, constraints are met, add to storage
                 rows.add(crt);
             }
-            else if (crt.getTime() == last.getTime())
+            else if (crt.getTime() == last.getTime() )
             {
-                throw new DuplicateTimestampException(last,
-                    "rows " + last.getLineNumber() + " and " + crt.getLineNumber() +
-                    " have the same timestamp " +
-                    (tsf != null ? tsf.format(crt.getTime()) : crt.getTime()));
+                if (!acceptDuplicateTimestamps)
+                {
+                    throw new DuplicateTimestampException(last,
+                        "rows " + last.getLineNumber() + " and " + crt.getLineNumber() +
+                            " have the same timestamp " +
+                            (tsf != null ? tsf.format(crt.getTime()) : crt.getTime()));
+                }
+
+                // we're in the situation where we accept multiple rows with the same timestamp, add to storage
+                rows.add(crt);
             }
             else
             {
                 // current time stamp is smaller than last time stamp
                 throw new UserErrorException(
                     "line " + crt.getLineNumber() + " timestamp " +
-                    (tsf != null ? tsf.format(crt.getTime()) : crt.getTime()) +
-                    " falls behind previous line " + last.getLineNumber() + " timestamp " +
-                    (tsf != null ? tsf.format(last.getTime()) : last.getTime()));
+                        (tsf != null ? tsf.format(crt.getTime()) : crt.getTime()) +
+                        " falls behind previous line " + last.getLineNumber() + " timestamp " +
+                        (tsf != null ? tsf.format(last.getTime()) : last.getTime()));
             }
         }
         else if (crt.getLineNumber() != null && crt.getLineNumber().equals(last.getLineNumber()))
@@ -93,8 +119,8 @@ public class LinkedListStorage implements Storage
         {
             // smaller line number - unusual case, but possible if the parsing is done non-sequentially - go back
 
-            // VERY INEFFICIENT - the performance can be improved with a double-linked list and starting from the last element that was
-            // added - but this will work, for the time being
+            // VERY INEFFICIENT - the performance can be improved with a double-linked list and starting from the last
+            // element that was added - but this will work, for the time being
 
             Row p = null; // previous
             boolean done = false;
@@ -125,14 +151,14 @@ public class LinkedListStorage implements Storage
                     {
                         throw new DuplicateTimestampException(c,
                             "duplicate line " + crt.getLineNumber() + " with the same timestamp ("
-                            + (tsf != null ? tsf.format(crt.getTime()) : crt.getTime()) + ")");
+                                + (tsf != null ? tsf.format(crt.getTime()) : crt.getTime()) + ")");
                     }
                     else
                     {
                         throw new DuplicateLineNumberException(
                             "attempt to add line " + crt.getLineNumber() +
-                            " but it seems the line was already added to storage for timestamp " +
-                            (tsf != null ? tsf.format(c.getTime()) : c.getTime()) );
+                                " but it seems the line was already added to storage for timestamp " +
+                                (tsf != null ? tsf.format(c.getTime()) : c.getTime()) );
                     }
                 }
                 else
@@ -142,16 +168,16 @@ public class LinkedListStorage implements Storage
                     {
                         throw new UserErrorException(
                             "line " + crt.getLineNumber() + " has a timestamp (" +
-                            (tsf != null ? tsf.format(crt.getTime()) : crt.getTime()) +
-                            ") that precedes the timestamp of line " + p.getLineNumber() + " (" +
-                            (tsf != null ? tsf.format(p.getTime()) : p.getTime()) + ")");
+                                (tsf != null ? tsf.format(crt.getTime()) : crt.getTime()) +
+                                ") that precedes the timestamp of line " + p.getLineNumber() + " (" +
+                                (tsf != null ? tsf.format(p.getTime()) : p.getTime()) + ")");
                     }
-                    else if (crt.getTime() == p.getTime())
+                    else if (crt.getTime() == p.getTime() && !acceptDuplicateTimestamps)
                     {
                         throw new DuplicateTimestampException(p,
                             "rows " + crt.getLineNumber() + " and " + p.getLineNumber() +
-                            " have the same timestamp (" +
-                            (tsf != null ? tsf.format(crt.getTime()) : crt.getTime()) + ")");
+                                " have the same timestamp (" +
+                                (tsf != null ? tsf.format(crt.getTime()) : crt.getTime()) + ")");
                     }
                     else if (crt.getTime() < c.getTime())
                     {
@@ -164,21 +190,22 @@ public class LinkedListStorage implements Storage
                     {
                         throw new DuplicateTimestampException(c,
                             "rows " + crt.getLineNumber() + " and " + c.getLineNumber() +
-                            " have the same timestamp (" +
-                            (tsf != null ? tsf.format(crt.getTime()) : crt.getTime()) + ")");
+                                " have the same timestamp (" +
+                                (tsf != null ? tsf.format(crt.getTime()) : crt.getTime()) + ")");
                     }
                     else
                     {
                         throw new UserErrorException(
                             "line " + crt.getLineNumber() + " has a timestamp (" +
-                            (tsf != null ? tsf.format(crt.getTime()) : crt.getTime()) +
-                            ") that succeeds the timestamp of line " + c.getLineNumber() + " (" +
-                            (tsf != null ? tsf.format(c.getTime()) : c.getTime()) + ")");
+                                (tsf != null ? tsf.format(crt.getTime()) : crt.getTime()) +
+                                ") that succeeds the timestamp of line " + c.getLineNumber() + " (" +
+                                (tsf != null ? tsf.format(c.getTime()) : c.getTime()) + ")");
                     }
                 }
             }
 
-            // we made it all the way to the end of the list, the new line was inserted, just switch the list - the old one will be GCed
+            // we made it all the way to the end of the list, the new line was inserted, just switch the list - the old
+            // one will be GCed
             rows = newRows;
         }
     }
@@ -231,14 +258,14 @@ public class LinkedListStorage implements Storage
         return rows.iterator();
     }
 
-    // Public --------------------------------------------------------------------------------------
+    // Public ----------------------------------------------------------------------------------------------------------
 
-    // Package protected ---------------------------------------------------------------------------
+    // Package protected -----------------------------------------------------------------------------------------------
 
-    // Protected -----------------------------------------------------------------------------------
+    // Protected -------------------------------------------------------------------------------------------------------
 
-    // Private -------------------------------------------------------------------------------------
+    // Private ---------------------------------------------------------------------------------------------------------
 
-    // Inner classes -------------------------------------------------------------------------------
+    // Inner classes ---------------------------------------------------------------------------------------------------
 
 }

@@ -272,6 +272,8 @@ public class ResampleCommandTest extends Assert
     @Test
     public void simpleExecute() throws Exception
     {
+        fail("RETURN HERE");
+
         Resample r = new Resample();
 
         List<Series> series = new ArrayList<Series>();

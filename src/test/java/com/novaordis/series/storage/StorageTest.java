@@ -16,22 +16,22 @@ import java.util.Iterator;
  */
 public abstract class StorageTest extends Assert
 {
-    // Constants ---------------------------------------------------------------------------------------------------------------------------
+    // Constants -------------------------------------------------------------------------------------------------------
 
     private static final Logger log = Logger.getLogger(StorageTest.class);
 
-    // Static ------------------------------------------------------------------------------------------------------------------------------
+    // Static ----------------------------------------------------------------------------------------------------------
 
-    // Attributes --------------------------------------------------------------------------------------------------------------------------
+    // Attributes ------------------------------------------------------------------------------------------------------
 
-    // Constructors ------------------------------------------------------------------------------------------------------------------------
+    // Constructors ----------------------------------------------------------------------------------------------------
 
-    // Public ------------------------------------------------------------------------------------------------------------------------------
+    // Public ----------------------------------------------------------------------------------------------------------
 
     @Test
     public void addLineConstraints_NoLinesWithSameNumber() throws Exception
     {
-        Storage s = getStorageToTest();
+        Storage s = getStorageToTest(false);
 
         Row ml = new MockRow(1, 1000L, "doesn't matter");
 
@@ -60,7 +60,7 @@ public abstract class StorageTest extends Assert
     @Test
     public void addLineConstraints_NoLinesWithSameNumber_MultipleLinesExist() throws Exception
     {
-        Storage s = getStorageToTest();
+        Storage s = getStorageToTest(false);
 
         Row ml = new MockRow(1, 1L, "doesn't matter");
 
@@ -144,9 +144,9 @@ public abstract class StorageTest extends Assert
 
 
     @Test
-    public void addLineConstraints_DuplicateTimestamp_OneLine() throws Exception
+    public void addLineConstraints_DuplicateTimestamp_OneLine_WeDoNotAcceptDuplicateTimestamps() throws Exception
     {
-        Storage s = getStorageToTest();
+        Storage s = getStorageToTest(false);
 
         Row ml = new MockRow(1, 1L, "something");
         s.add(ml);
@@ -174,9 +174,31 @@ public abstract class StorageTest extends Assert
     }
 
     @Test
-    public void addLineConstraints_DuplicateTimestamp_MultipleLines() throws Exception
+    public void addLineConstraints_DuplicateTimestamp_OneLine_WeDoAcceptDuplicateTimestamps() throws Exception
     {
-        Storage s = getStorageToTest();
+        Storage s = getStorageToTest(true);
+
+        Row ml = new MockRow(1, 1L, "something");
+        s.add(ml);
+
+        assertEquals(1, s.getLineCount());
+        assertEquals(1L, s.getBeginTime());
+        assertEquals(1L, s.getEndTime());
+
+        // multiple rows with the same timestamp acceptable
+
+        ml = new MockRow(2, 1L, "something");
+        s.add(ml);
+
+        assertEquals(2, s.getLineCount());
+        assertEquals(1L, s.getBeginTime());
+        assertEquals(1L, s.getEndTime());
+    }
+
+    @Test
+    public void addLineConstraints_DuplicateTimestamp_MultipleLines_WeDoNotAcceptDuplicateTimestamps() throws Exception
+    {
+        Storage s = getStorageToTest(false);
 
         Row ml = new MockRow(1, 1L, "doesn't matter");
 
@@ -261,9 +283,82 @@ public abstract class StorageTest extends Assert
     }
 
     @Test
+    public void addLineConstraints_DuplicateTimestamp_MultipleLines_WeDoAcceptDuplicateTimestamps() throws Exception
+    {
+        Storage s = getStorageToTest(true);
+
+        Row ml = new MockRow(1, 1L, "doesn't matter");
+
+        s.add(ml);
+
+        assertEquals(1, s.getLineCount());
+        assertEquals(1L, s.getBeginTime());
+        assertEquals(1L, s.getEndTime());
+
+        Row m2 = new MockRow(100, 100L, "blah100");
+
+        s.add(m2);
+
+        assertEquals(2, s.getLineCount());
+        assertEquals(1L, s.getBeginTime());
+        assertEquals(100L, s.getEndTime());
+
+        Row m3 = new MockRow(50, 50L, "doesn't matter");
+
+        s.add(m3);
+
+        assertEquals(3, s.getLineCount());
+        assertEquals(1L, s.getBeginTime());
+        assertEquals(100L, s.getEndTime());
+
+        Row m = null;
+
+        try
+        {
+            m = new MockRow(1000, 1L, "doesn't matter");
+            s.add(m);
+            fail("should fail because the timestamp is out of sequence");
+        }
+        catch(UserErrorException e)
+        {
+            log.info(e.getMessage());
+        }
+
+        assertEquals(3, s.getLineCount());
+        assertEquals(1L, s.getBeginTime());
+        assertEquals(100L, s.getEndTime());
+
+        // a row with the same timestamp and a successive line number should be acceptable
+
+        m = new MockRow(51, 50L, "doesn't matter");
+        s.add(m);
+
+        assertEquals(4, s.getLineCount());
+        assertEquals(1L, s.getBeginTime());
+        assertEquals(100L, s.getEndTime());
+
+        // a row with the same timestamp should be acceptable
+
+        m = new MockRow(101, 100L, "doesn't matter");
+        s.add(m);
+
+        assertEquals(5, s.getLineCount());
+        assertEquals(1L, s.getBeginTime());
+        assertEquals(100L, s.getEndTime());
+
+        Row m4 = new MockRow(200, 200L, "doesn't matter");
+
+        s.add(m4);
+
+        assertEquals(6, s.getLineCount());
+        assertEquals(1L, s.getBeginTime());
+        assertEquals(200L, s.getEndTime());
+    }
+
+    @Test
     public void addLineConstraints_LineBackInTime_Beginning() throws Exception
     {
-        Storage s = getStorageToTest();
+        Storage s = getStorageToTest(false);
 
         Row m = new MockRow(1, 1000L, "");
         s.add(m);
@@ -292,7 +387,7 @@ public abstract class StorageTest extends Assert
     @Test
     public void addLineConstraints_LineBackInTime_Middle() throws Exception
     {
-        Storage s = getStorageToTest();
+        Storage s = getStorageToTest(false);
 
         Row ml = new MockRow(1, 1000L, "");
         s.add(ml);
@@ -329,7 +424,7 @@ public abstract class StorageTest extends Assert
     @Test
     public void addLineConstraints_DuplicateLineInThePast_DifferentTimestamp() throws Exception
     {
-        Storage s = getStorageToTest();
+        Storage s = getStorageToTest(false);
 
         Row m = null;
 
@@ -363,7 +458,7 @@ public abstract class StorageTest extends Assert
     @Test
     public void addLineConstraints_DuplicateLineInThePast_SameTimestamp() throws Exception
     {
-        Storage s = getStorageToTest();
+        Storage s = getStorageToTest(false);
 
         Row m = null;
 
@@ -399,7 +494,7 @@ public abstract class StorageTest extends Assert
     @Test
     public void addLineConstraints_InsertInTheMiddle_TimeLow() throws Exception
     {
-        Storage s = getStorageToTest();
+        Storage s = getStorageToTest(false);
 
         Row m = null;
 
@@ -431,7 +526,7 @@ public abstract class StorageTest extends Assert
     @Test
     public void addLineConstraints_InsertInTheMiddle_SameTimeAsPrevious() throws Exception
     {
-        Storage s = getStorageToTest();
+        Storage s = getStorageToTest(false);
 
         Row m = null;
 
@@ -465,7 +560,7 @@ public abstract class StorageTest extends Assert
     @Test
     public void addLineConstraints_InsertInTheMiddleAllGood() throws Exception
     {
-        Storage s = getStorageToTest();
+        Storage s = getStorageToTest(false);
 
         Row m = null;
 
@@ -491,7 +586,7 @@ public abstract class StorageTest extends Assert
     @Test
     public void addLineConstraints_InsertInTheMiddle_TimeHigh() throws Exception
     {
-        Storage s = getStorageToTest();
+        Storage s = getStorageToTest(false);
 
         Row m = null;
 
@@ -525,7 +620,7 @@ public abstract class StorageTest extends Assert
     @Test
     public void addLineConstraints_InsertInTheMiddle_SameTimeAsCurrent() throws Exception
     {
-        Storage s = getStorageToTest();
+        Storage s = getStorageToTest(false);
 
         Row m = null;
 
@@ -559,13 +654,13 @@ public abstract class StorageTest extends Assert
     }
 
     //
-    // iterator tests ----------------------------------------------------------------------------------------------------------------------
+    // iterator tests --------------------------------------------------------------------------------------------------
     //
 
     @Test
     public void emptyStorageIterator() throws Exception
     {
-        Storage s = getStorageToTest();
+        Storage s = getStorageToTest(false);
 
         Iterator<Row> i = s.iterator();
 
@@ -575,7 +670,7 @@ public abstract class StorageTest extends Assert
     @Test
     public void oneElementStorageIterator() throws Exception
     {
-        Storage s = getStorageToTest();
+        Storage s = getStorageToTest(false);
 
         MockRow mr = new MockRow(1L, 1L, "something");
         s.add(mr);
@@ -590,7 +685,7 @@ public abstract class StorageTest extends Assert
     @Test
     public void multipleElementsStorageIterator() throws Exception
     {
-        Storage s = getStorageToTest();
+        Storage s = getStorageToTest(false);
 
         MockRow mr = new MockRow(1L, 1L, "something");
         s.add(mr);
@@ -608,23 +703,23 @@ public abstract class StorageTest extends Assert
         assertFalse(i.hasNext());
     }
 
-    // isEmpty() ---------------------------------------------------------------------------------------------------------------------------
+    // isEmpty() -------------------------------------------------------------------------------------------------------
 
     @Test
     public void testIsEmpty() throws Exception
     {
-        Storage s = getStorageToTest();
+        Storage s = getStorageToTest(false);
 
         assertTrue(s.isEmpty());
     }
 
-    // Package protected -------------------------------------------------------------------------------------------------------------------
+    // Package protected -----------------------------------------------------------------------------------------------
 
-    // Protected ---------------------------------------------------------------------------------------------------------------------------
+    // Protected -------------------------------------------------------------------------------------------------------
 
-    protected abstract Storage getStorageToTest() throws Exception;
+    protected abstract Storage getStorageToTest(boolean acceptsDuplicateTimestamps) throws Exception;
 
-    // Private -----------------------------------------------------------------------------------------------------------------------------
+    // Private ---------------------------------------------------------------------------------------------------------
 
-    // Inner classes -----------------------------------------------------------------------------------------------------------------------
+    // Inner classes ---------------------------------------------------------------------------------------------------
 }
