@@ -1,0 +1,14 @@
+
+TODO ---------------------------------------------------------------------------------------------------------------------------------------
+
+* Make all tests pass. Last one that doesn't is:
+
+Tests in error:
+  simpleExecute(com.novaordis.series.command.ResampleCommandTest): NOT YET IMPLEMENTED merge(null (1))
+
+
+* Return to:
+
+                 ./bin/series --debug resample data/1.csv  data/2.csv
+
+  for big level picture.

@@ -1,0 +1,29 @@
+#!/bin/bash
+
+#
+# For usage see the User Manual
+#
+
+reldir=`dirname $0`
+sep="\;"
+
+m2_home="C:/Users/ovidiu/.m2/repository"
+
+classpath=${reldir}/../target/series.jar${sep}${reldir}/../src/main/resources${sep}${m2_home}/log4j/log4j/1.2.16/log4j-1.2.16.jar${sep}
+
+while [ "${1}" != "" ]; do
+    if [ "$1" != "${1/ /}" ]; then
+        # argument contain spaces, enclose it in quotes
+        args="${args} \"${1}\""
+    elif [ "${1}" = "--debug" -o "${1}" = "--debug" ]; then
+        debug_opts="-Xdebug -Xrunjdwp:transport=dt_shmem,server=y,suspend=y,address=mvn"
+    else
+        # argument does not contain spaces, pass it unchanged
+        args="${args} ${1}"
+    fi
+    shift
+done
+
+
+java -cp ${classpath} ${debug_opts} com.novaordis.series.Main ${args}
+
