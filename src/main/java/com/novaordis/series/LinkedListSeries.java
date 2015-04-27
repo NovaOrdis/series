@@ -12,8 +12,8 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * A series created internally, usually the result of processing (re-sampling, merging, etc.). It delegates to an underlying linked-list
- * Storage.
+ * A series created internally, usually the result of processing (re-sampling, merging, etc.). It delegates to an
+ * underlying linked-list Storage.
  *
  * @see Series
  *
@@ -23,32 +23,60 @@ import java.util.List;
  */
 public class LinkedListSeries implements Series
 {
-    // Constants ---------------------------------------------------------------------------------------------------------------------------
+    // Constants -------------------------------------------------------------------------------------------------------
 
     private static final Logger log = Logger.getLogger(LinkedListSeries.class);
 
-    // Static ------------------------------------------------------------------------------------------------------------------------------
+    // Static ----------------------------------------------------------------------------------------------------------
 
-    // Attributes --------------------------------------------------------------------------------------------------------------------------
+    // Attributes ------------------------------------------------------------------------------------------------------
 
     private String name;
     private Storage storage;
-
     private List<Header> headers;
-
     private SimpleDateFormat timestampFormat;
 
-    // Constructors ------------------------------------------------------------------------------------------------------------------------
+    // Constructors ----------------------------------------------------------------------------------------------------
 
+    /**
+     * By default, the storage implementation DOES NOT accept duplicate timestamps.
+     *
+     * @see com.novaordis.series.LinkedListSeries(boolean)
+     */
     public LinkedListSeries()
     {
-        this((Header[])null);
+        this(false, (Header[])null);
     }
 
+    /**
+     * @param acceptsDuplicateTimestamps if true, the underlying storage will accept adding two or more rows with the
+     *                                   same timestamp. If false, the underlying storage implementation will throw
+     *                                   DuplicateTimestampException if rows with the same timestamps are detected.
+     */
+    public LinkedListSeries(boolean acceptsDuplicateTimestamps)
+    {
+        this(acceptsDuplicateTimestamps, (Header[])null);
+    }
+
+    /**
+     * By default, the storage implementation DOES NOT accept duplicate timestamps.
+     *
+     * @see com.novaordis.series.LinkedListSeries(boolean, Header...)
+     */
     public LinkedListSeries(Header... headers)
     {
+        this(false, headers);
+    }
+
+    /**
+     * @param acceptsDuplicateTimestamps if true, the underlying storage will accept adding two or more rows with the
+     *                                   same timestamp. If false, the underlying storage implementation will throw
+     *                                   DuplicateTimestampException if rows with the same timestamps are detected.
+     */
+    public LinkedListSeries(boolean acceptsDuplicateTimestamps, Header... headers)
+    {
         this.headers = new ArrayList<Header>();
-        this.storage = new LinkedListStorage();
+        this.storage = new LinkedListStorage(acceptsDuplicateTimestamps);
 
         if (headers != null)
         {
@@ -60,7 +88,7 @@ public class LinkedListSeries implements Series
 
     public LinkedListSeries(Row... rows) throws Exception
     {
-        this((Header[])null);
+        this(false, (Header[])null);
 
         if (rows != null)
         {
@@ -73,7 +101,7 @@ public class LinkedListSeries implements Series
         log.debug(this + " constructed");
     }
 
-    // Series implementation ---------------------------------------------------------------------------------------------------------------
+    // Series implementation -------------------------------------------------------------------------------------------
 
     @Override
     public String getName()
@@ -197,7 +225,7 @@ public class LinkedListSeries implements Series
         this.timestampFormat = f;
     }
 
-    // Public ------------------------------------------------------------------------------------------------------------------------------
+    // Public ----------------------------------------------------------------------------------------------------------
 
     public void setName(String name)
     {
@@ -215,18 +243,18 @@ public class LinkedListSeries implements Series
         return "" + name + " (" + storage.getLineCount() + ")";
     }
 
-    // Package protected -------------------------------------------------------------------------------------------------------------------
+    // Package protected -----------------------------------------------------------------------------------------------
 
-    // Protected ---------------------------------------------------------------------------------------------------------------------------
+    // Protected -------------------------------------------------------------------------------------------------------
 
     protected Storage getStorage()
     {
         return storage;
     }
 
-    // Private -----------------------------------------------------------------------------------------------------------------------------
+    // Private ---------------------------------------------------------------------------------------------------------
 
-    // Inner classes -----------------------------------------------------------------------------------------------------------------------
+    // Inner classes ---------------------------------------------------------------------------------------------------
 }
 
 
