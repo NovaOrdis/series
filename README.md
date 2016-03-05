@@ -1,2 +1,2 @@
 # series
-A library for handling time series
+A Java library for handling timed series
